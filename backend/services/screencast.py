@@ -42,23 +42,30 @@ class ScreencastService:
                 pass
 
         playlist_path = self._hls_dir / "stream.m3u8"
-        display = os.environ.get("DISPLAY", ":1")
 
-        logger.info("screencast_starting", display=display, hls_dir=str(self._hls_dir))
+        logger.info("screencast_starting", hls_dir=str(self._hls_dir))
+        
+        import mss
+        self._sct = mss.MSS()
+        self._mon = self._sct.monitors[1]  # primary monitor
+        width = self._mon["width"]
+        height = self._mon["height"]
 
         cmd = [
             "ffmpeg",
-            "-f", "x11grab",
-            "-video_size", "1920x1080",  # Assume standard fallback; ideally detect
-            "-framerate", "30",
-            "-i", display,
+            "-y",
+            "-f", "rawvideo",
+            "-pixel_format", "bgra",
+            "-video_size", f"{width}x{height}",
+            "-framerate", "15",
+            "-i", "-",
             "-c:v", "libx264",
-            "-preset", "ultrafast",     # Low latency, higher bitrates
-            "-tune", "zerolatency",     # Crucial for live casting
-            "-pix_fmt", "yuv420p",      # Required by Chromecast
+            "-preset", "ultrafast",
+            "-tune", "zerolatency",
+            "-pix_fmt", "yuv420p",
             "-f", "hls",
-            "-hls_time", "2",           # 2-second segments
-            "-hls_list_size", "5",      # Keep last 5 segments in playlist
+            "-hls_time", "2",
+            "-hls_list_size", "5",
             "-hls_flags", "delete_segments",
             "-hls_segment_filename", str(self._hls_dir / "segment_%03d.ts"),
             str(playlist_path)
@@ -66,34 +73,65 @@ class ScreencastService:
 
         self._process = await asyncio.create_subprocess_exec(
             *cmd,
+            stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
         )
 
+        self._is_active = True
+        self._capture_task = asyncio.create_task(self._capture_loop())
+
         # Wait a few seconds for ffmpeg to generate the first segments
-        # so the Chromecast doesn't 404 immediately
         await asyncio.sleep(3)
 
         if self._process.returncode is not None:
             raise RuntimeError(f"FFmpeg exited immediately with code {self._process.returncode}")
 
-        self._is_active = True
         logger.info("screencast_active")
         return str(playlist_path)
 
+    async def _capture_loop(self):
+        """Continuously grab frames via mss and write to ffmpeg stdin."""
+        try:
+            while self._is_active and self._process and self._process.stdin:
+                sct_img = self._sct.grab(self._mon)
+                try:
+                    self._process.stdin.write(sct_img.bgra)
+                    await self._process.stdin.drain()
+                except (BrokenPipeError, ConnectionResetError):
+                    break
+                await asyncio.sleep(1/15.0)  # ~15 fps
+        except Exception as e:
+            logger.error("screencast_loop_error", error=str(e))
+        finally:
+            if self._process and self._process.stdin:
+                try:
+                    self._process.stdin.close()
+                except Exception:
+                    pass
+
     async def stop(self):
         """Stop the screencast."""
-        if self._process:
-            logger.info("screencast_stopping")
-            self._process.terminate()
-            try:
-                await asyncio.wait_for(self._process.wait(), timeout=5.0)
-            except asyncio.TimeoutError:
-                self._process.kill()
-            self._process = None
-            
         self._is_active = False
         
+        if hasattr(self, "_capture_task") and self._capture_task:
+            self._capture_task.cancel()
+            
+        if hasattr(self, "_sct") and self._sct:
+            self._sct.close()
+
+        if self._process:
+            logger.info("screencast_stopping")
+            try:
+                if self._process.stdin:
+                    self._process.stdin.close()
+                await asyncio.wait_for(self._process.wait(), timeout=3.0)
+            except asyncio.TimeoutError:
+                self._process.kill()
+            except Exception:
+                pass
+            self._process = None
+            
         # Cleanup
         for f in self._hls_dir.glob("*"):
             try:
