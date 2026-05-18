@@ -2,7 +2,9 @@
 REST API Routes — health checks, history, memory search, configuration.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request, Response, HTTPException
+from fastapi.responses import StreamingResponse
+import os
 from api.schemas import HealthResponse, MemorySearchRequest
 from core.dependencies import get_container
 from core.events import Event, EventType
@@ -465,3 +467,59 @@ async def youtube_search(q: str, count: int = 3):
             continue
 
     return {"results": [], "error": "All Invidious instances failed"}
+
+
+@router.get("/media/stream")
+async def stream_local_media(path: str, request: Request):
+    """
+    Stream a local file over HTTP with Range support.
+    Used by Chromecast to play local media from this machine.
+    """
+    if not os.path.exists(path) or not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    file_size = os.path.getsize(path)
+    range_header = request.headers.get("Range")
+
+    if range_header:
+        # Parse standard Range header (e.g., bytes=0-1024)
+        range_match = range_header.strip().replace("bytes=", "").split("-")
+        start = int(range_match[0]) if range_match[0] else 0
+        end = int(range_match[1]) if len(range_match) > 1 and range_match[1] else file_size - 1
+    else:
+        start = 0
+        end = file_size - 1
+
+    if start >= file_size or end >= file_size or start > end:
+        raise HTTPException(status_code=416, detail="Requested Range Not Satisfiable")
+
+    chunk_size = (end - start) + 1
+
+    def file_iterator():
+        with open(path, "rb") as f:
+            f.seek(start)
+            bytes_left = chunk_size
+            while bytes_left > 0:
+                read_size = min(bytes_left, 1024 * 1024) # 1MB chunks
+                data = f.read(read_size)
+                if not data:
+                    break
+                bytes_left -= len(data)
+                yield data
+
+    headers = {
+        "Content-Range": f"bytes {start}-{end}/{file_size}",
+        "Accept-Ranges": "bytes",
+        "Content-Length": str(chunk_size),
+        # Basic MIME guess
+        "Content-Type": "video/mp4" if path.endswith(".mp4") else "application/octet-stream",
+    }
+    
+    # 206 Partial Content is required for video streaming
+    status_code = 206 if range_header else 200
+    
+    return StreamingResponse(
+        file_iterator(),
+        status_code=status_code,
+        headers=headers,
+    )

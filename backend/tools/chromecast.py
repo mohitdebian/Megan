@@ -19,18 +19,18 @@ class ChromecastTool(BaseTool):
     description = (
         "Control Google Cast devices and smart TVs on the local network. "
         "Use this tool when the user asks to pause the TV, turn the volume up or down, "
-        "mute the TV, stop playback, or play something on YouTube on the TV. "
-        "Actions: 'play', 'pause', 'stop', 'mute', 'unmute', 'volume_up', 'volume_down', 'set_volume', 'launch_youtube'."
+        "mute the TV, stop playback, play something on YouTube, or cast a local media file to the TV. "
+        "Actions: 'play', 'pause', 'stop', 'mute', 'unmute', 'volume_up', 'volume_down', 'set_volume', 'launch_youtube', 'cast_local_media'."
     )
     parameters = {
         "action": {
             "type": "string",
-            "description": "The action to perform on the TV (e.g. 'play', 'pause', 'volume_up', 'volume_down', 'mute', 'launch_youtube')",
+            "description": "The action to perform on the TV (e.g. 'play', 'pause', 'volume_up', 'volume_down', 'mute', 'launch_youtube', 'cast_local_media')",
             "required": True,
         },
         "value": {
             "type": "string",
-            "description": "Optional value for the action. (e.g., volume level for 'set_volume', or YouTube Video ID/Search Query for 'launch_youtube')",
+            "description": "Optional value for the action. (e.g., volume level for 'set_volume', or absolute file path for 'cast_local_media')",
         },
         "device_name": {
             "type": "string",
@@ -107,6 +107,25 @@ class ChromecastTool(BaseTool):
                 # Just launch the app for now. Playback requires actual video IDs.
                 yt.launch()
                 output_msg = f"Launched YouTube on {cast.device.friendly_name}"
+            elif action == "cast_local_media":
+                import urllib.parse
+                from core.network_utils import get_local_ip
+                
+                if not value:
+                    return ToolResult(success=False, output="Absolute file path required in 'value' for cast_local_media.")
+                    
+                local_ip = get_local_ip()
+                encoded_path = urllib.parse.quote(value)
+                stream_url = f"http://{local_ip}:8000/api/media/stream?path={encoded_path}"
+                
+                content_type = "video/mp4"
+                if value.endswith(".mkv"): content_type = "video/x-matroska"
+                elif value.endswith(".webm"): content_type = "video/webm"
+                elif value.endswith(".mp3"): content_type = "audio/mp3"
+                
+                mc.play_media(stream_url, content_type)
+                mc.block_until_active()
+                output_msg = f"Started streaming local file to {cast.device.friendly_name}"
             else:
                 pychromecast.discovery.stop_discovery(browser)
                 return ToolResult(success=False, output=f"Unknown action: {action}")

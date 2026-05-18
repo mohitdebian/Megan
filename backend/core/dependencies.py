@@ -52,6 +52,7 @@ class Container:
             from tools.window import WindowTool
             from tools.screen_vision import ScreenVisionTool
             from tools.chromecast import ChromecastTool
+            from tools.scene_tool import SceneTool
 
             registry = ToolRegistry()
             registry.register(TerminalTool(self.settings))
@@ -70,6 +71,7 @@ class Container:
             registry.register(PersonaTool(self.memory_manager()))
             registry.register(ScreenVisionTool(self.settings))
             registry.register(ChromecastTool(self.settings))
+            registry.register(SceneTool(self.scene_manager()))
 
             telegram_tool = TelegramTool(self.settings)
             registry.register(telegram_tool)
@@ -141,6 +143,14 @@ class Container:
             return LANMonitor(self.event_bus())
 
         return self._get_or_create("lan_monitor", factory)
+
+    def scene_manager(self):
+        from services.scene_manager import SceneManager
+
+        def factory():
+            return SceneManager(self.event_bus(), self.settings)
+
+        return self._get_or_create("scene_manager", factory)
 
     async def initialize(self) -> None:
         """Pre-initialize critical services."""
