@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Data
+data/
+*.db
+
+# Environment
+.env
+
+# Node
+node_modules/
+frontend/dist/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# WhatsApp Bridge
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Temporary/Scratch Files
+=5.4
+MEGAN_TODO_*
+scratch.py
+test_*.py

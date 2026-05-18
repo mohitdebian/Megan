@@ -1,0 +1,282 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* === MEGAN_OS HOLOGRAPHIC INTERFACE === */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Share Tech Mono', monospace;
+  background: #08080c;
+  color: #e2e2e8;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar — clean thin */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1a1a24; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #22d3ee; }
+
+/* Cursor */
+@keyframes terminal-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.cursor-blink::after {
+  content: '█';
+  animation: terminal-blink 1s infinite;
+  color: #22d3ee;
+  margin-left: 2px;
+  font-weight: 400;
+}
+
+/* Holographic ring glow (no gradient) */
+.ring-glow {
+  box-shadow:
+    0 0 0 1px rgba(34, 211, 238, 0.15),
+    0 0 12px rgba(34, 211, 238, 0.08),
+    0 0 24px rgba(34, 211, 238, 0.04);
+}
+
+.ring-glow-amber {
+  box-shadow:
+    0 0 0 1px rgba(245, 158, 11, 0.15),
+    0 0 12px rgba(245, 158, 11, 0.08),
+    0 0 24px rgba(245, 158, 11, 0.04);
+}
+
+.ring-glow-rose {
+  box-shadow:
+    0 0 0 1px rgba(251, 113, 133, 0.15),
+    0 0 12px rgba(251, 113, 133, 0.08),
+    0 0 24px rgba(251, 113, 133, 0.04);
+}
+
+/* Status dot */
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+  50% { opacity: 0.6; box-shadow: 0 0 0 3px transparent; }
+}
+
+.dot-pulse {
+  animation: dot-pulse 2s ease-in-out infinite;
+}
+
+/* Code block */
+.msg-code {
+  border-left: 1px solid #22d3ee;
+  background: #0c0c14;
+  padding: 8px 12px;
+  margin: 8px 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* Nav items */
+.nav-item {
+  transition: all 0.2s ease;
+  border-left: 1px solid transparent;
+}
+.nav-item:hover {
+  border-left-color: #22d3ee;
+  background: rgba(34, 211, 238, 0.04);
+}
+.nav-item.active {
+  border-left-color: #22d3ee;
+  background: rgba(34, 211, 238, 0.08);
+}
+
+/* Voice wave */
+.voice-wave {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 14px;
+}
+.wave-bar {
+  display: inline-block;
+  width: 2px;
+  height: 4px;
+  background: currentColor;
+  border-radius: 1px;
+  animation: wave-bounce 0.8s ease-in-out infinite;
+}
+@keyframes wave-bounce {
+  0%, 100% { height: 4px; opacity: 0.4; }
+  50% { height: 12px; opacity: 1; }
+}
+
+/* Fade-in for modals */
+@keyframes fade-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+/* Holographic scan line (single color, no gradient) */
+.holo-scan::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(34, 211, 238, 0.1);
+  animation: holo-scan 5s linear infinite;
+  pointer-events: none;
+  z-index: 50;
+}
+
+/* Circular orb states */
+.orb-idle { background: #22d3ee; }
+.orb-listening { background: #34d399; }
+.orb-thinking { background: #f59e0b; }
+.orb-speaking { background: #22d3ee; }
+.orb-working { background: #f59e0b; }
+
+/* Circular border ring animation */
+@keyframes border-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.border-spin {
+  animation: border-spin 4s linear infinite;
+}
+
+/* Clean card hover */
+.card-hover {
+  transition: all 0.15s ease;
+}
+.card-hover:hover {
+  border-color: #252530;
+  background: rgba(34, 211, 238, 0.02);
+}
+:root {
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  
+  --bg-deep: #050508;
+  --bg-grid: rgba(0, 255, 255, 0.03);
+  
+  --color-cyan: #0ff;
+  --color-cyan-glow: rgba(0, 255, 255, 0.3);
+  --color-cyan-dim: rgba(0, 255, 255, 0.5);
+  
+  --color-purple: #b0f;
+  --color-rose: #f05;
+  
+  --text-main: #e0f8f8;
+  --text-dim: #709898;
+  
+  --panel-bg: rgba(5, 10, 15, 0.7);
+  --panel-border: rgba(0, 255, 255, 0.2);
+  --panel-border-glow: rgba(0, 255, 255, 0.5);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-mono);
+  background-color: var(--bg-deep);
+  color: var(--text-main);
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Grid Background */
+.desktop-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-image: 
+    linear-gradient(var(--bg-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+  background-size: 40px 40px;
+  z-index: 0;
+}
+
+/* Scanline Overlay */
+.scanlines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(
+    to bottom,
+    rgba(255,255,255,0),
+    rgba(255,255,255,0) 50%,
+    rgba(0,0,0,0.1) 50%,
+    rgba(0,0,0,0.1)
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.3;
+}
+
+/* Frosted Glass Panel */
+.glass-panel {
+  background: var(--panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 0 20px rgba(0,0,0,0.8), inset 0 0 10px rgba(0,255,255,0.05);
+}
+
+.glass-panel:focus-within, .glass-panel.active {
+  border-color: var(--panel-border-glow);
+  box-shadow: 0 0 20px rgba(0,0,0,0.8), 0 0 10px var(--color-cyan-glow), inset 0 0 10px rgba(0,255,255,0.1);
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.3);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-cyan-dim);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-cyan);
+}
+
+/* Glow Text */
+.text-glow {
+  text-shadow: 0 0 5px var(--color-cyan-glow);
+}
+
+/* Inputs */
+input, textarea {
+  font-family: inherit;
+  color: inherit;
+}
+input:focus, textarea:focus {
+  outline: none;
+}
