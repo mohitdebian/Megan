@@ -54,6 +54,8 @@ class Container:
             from tools.chromecast import ChromecastTool
             from tools.scene_tool import SceneTool
             from tools.network import NetworkIntelligenceTool
+            from tools.media_tool import MediaTool
+            from tools.security_tool import SecurityTool
 
             registry = ToolRegistry()
             registry.register(TerminalTool(self.settings))
@@ -74,6 +76,8 @@ class Container:
             registry.register(ChromecastTool(self.settings, self.device_manager()))
             registry.register(SceneTool(self.scene_manager()))
             registry.register(NetworkIntelligenceTool(self.device_manager()))
+            registry.register(MediaTool(self.media_library()))
+            registry.register(SecurityTool(self.network_intelligence()))
 
             telegram_tool = TelegramTool(self.settings)
             registry.register(telegram_tool)
@@ -170,6 +174,22 @@ class Container:
 
         return self._get_or_create("automation_engine", factory)
 
+    def media_library(self):
+        from services.media_library import MediaLibrary
+
+        def factory():
+            return MediaLibrary(self.settings.data_dir)
+
+        return self._get_or_create("media_library", factory)
+
+    def network_intelligence(self):
+        from services.network_intelligence import NetworkIntelligence
+
+        def factory():
+            return NetworkIntelligence(self.event_bus(), self.settings.data_dir)
+
+        return self._get_or_create("network_intelligence", factory)
+
     async def initialize(self) -> None:
         """Pre-initialize critical services."""
         logger.info("container_initializing")
@@ -187,11 +207,24 @@ class Container:
         engine = self.automation_engine()
         await engine.start()
 
+        # Initialize media library scan
+        ml = self.media_library()
+        import asyncio
+        asyncio.create_task(ml.scan())
+        
+        # Start network intelligence scanning
+        ni = self.network_intelligence()
+        await ni.start_periodic_scan()
+
         logger.info("container_ready")
 
     async def shutdown(self) -> None:
         """Cleanup all services."""
         logger.info("container_shutdown")
+
+        ni = self._instances.get("network_intelligence")
+        if ni and hasattr(ni, "stop_periodic_scan"):
+            await ni.stop_periodic_scan()
 
         engine = self._instances.get("automation_engine")
         if engine and hasattr(engine, "stop"):

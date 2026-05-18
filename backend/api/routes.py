@@ -507,12 +507,21 @@ async def stream_local_media(path: str, request: Request):
                 bytes_left -= len(data)
                 yield data
 
+    import mimetypes
+    mime_type, _ = mimetypes.guess_type(path)
+    if not mime_type:
+        if path.endswith(".mkv"):
+            mime_type = "video/x-matroska"
+        elif path.endswith(".webm"):
+            mime_type = "video/webm"
+        else:
+            mime_type = "application/octet-stream"
+
     headers = {
         "Content-Range": f"bytes {start}-{end}/{file_size}",
         "Accept-Ranges": "bytes",
         "Content-Length": str(chunk_size),
-        # Basic MIME guess
-        "Content-Type": "video/mp4" if path.endswith(".mp4") else "application/octet-stream",
+        "Content-Type": mime_type,
     }
     
     # 206 Partial Content is required for video streaming
