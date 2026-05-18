@@ -53,6 +53,7 @@ class Container:
             from tools.screen_vision import ScreenVisionTool
             from tools.chromecast import ChromecastTool
             from tools.scene_tool import SceneTool
+            from tools.network import NetworkIntelligenceTool
 
             registry = ToolRegistry()
             registry.register(TerminalTool(self.settings))
@@ -70,8 +71,9 @@ class Container:
             registry.register(CheckBackgroundTasksTool(self))
             registry.register(PersonaTool(self.memory_manager()))
             registry.register(ScreenVisionTool(self.settings))
-            registry.register(ChromecastTool(self.settings))
+            registry.register(ChromecastTool(self.settings, self.lan_monitor()))
             registry.register(SceneTool(self.scene_manager()))
+            registry.register(NetworkIntelligenceTool(self.lan_monitor()))
 
             telegram_tool = TelegramTool(self.settings)
             registry.register(telegram_tool)

@@ -39,39 +39,63 @@ class ChromecastTool(BaseTool):
     }
     dangerous = False
 
-    def __init__(self, settings=None) -> None:
+    def __init__(self, settings=None, lan_monitor=None) -> None:
         self._settings = settings
+        self.lan_monitor = lan_monitor
 
     async def execute(
         self, action: str, value: str = "", device_name: str = "", **_
     ) -> ToolResult:
         try:
+            valid_actions = {"play", "pause", "stop", "mute", "unmute", "volume_up", "volume_down", "set_volume", "launch_youtube", "cast_local_media"}
+            if action not in valid_actions:
+                return ToolResult(success=False, output=f"Unknown action: {action}. Allowed actions: {', '.join(valid_actions)}")
+
             import pychromecast
             from pychromecast.controllers.youtube import YouTubeController
 
             logger.info("chromecast_tool_start", action=action, target=device_name or "auto")
 
-            # Fetch all chromecasts reliably
-            chromecasts, browser = pychromecast.get_chromecasts()
+            # Check known devices from LAN monitor instantly
+            devices = list(self.lan_monitor.active_devices.values()) if self.lan_monitor else []
+            
+            target_ip = None
+            if devices:
+                if device_name:
+                    target = device_name.lower()
+                    for d in devices:
+                        if target in d["friendly_name"].lower() or target in d["model"].lower() or target in d["id"].lower():
+                            target_ip = d["ip"]
+                            break
+                else:
+                    target_ip = devices[0]["ip"]
 
-            if device_name:
-                filtered = []
-                target = device_name.lower()
-                for c in chromecasts:
-                    if (target in c.cast_info.friendly_name.lower() or 
-                        target in str(c.cast_info.uuid).lower() or
-                        target in c.cast_info.model_name.lower()):
-                        filtered.append(c)
-                chromecasts = filtered
+            if not target_ip:
+                # Fallback to slow discovery if LAN monitor is empty or missing
+                chromecasts, browser = pychromecast.get_chromecasts()
+                if device_name:
+                    filtered = []
+                    target = device_name.lower()
+                    for c in chromecasts:
+                        if (target in c.cast_info.friendly_name.lower() or 
+                            target in str(c.cast_info.uuid).lower() or
+                            target in c.cast_info.model_name.lower()):
+                            filtered.append(c)
+                    chromecasts = filtered
 
-            if not chromecasts:
-                pychromecast.discovery.stop_discovery(browser)
-                return ToolResult(
-                    success=False,
-                    output=f"Could not find any Chromecast device matching '{device_name}' on the network." if device_name else "No Chromecast devices found on the local network.",
-                )
+                if not chromecasts:
+                    pychromecast.discovery.stop_discovery(browser)
+                    return ToolResult(
+                        success=False,
+                        output=f"Could not find any Chromecast device matching '{device_name}' on the network." if device_name else "No Chromecast devices found on the local network.",
+                    )
+                cast = chromecasts[0]
+            else:
+                # Instant connection via IP
+                logger.info("chromecast_connecting_direct", ip=target_ip)
+                cast = pychromecast.Chromecast(target_ip)
+                browser = None
 
-            cast = chromecasts[0]
             cast.wait()
             
             output_msg = ""
@@ -140,7 +164,8 @@ class ChromecastTool(BaseTool):
             time.sleep(0.5)
             
             # Clean up discovery
-            pychromecast.discovery.stop_discovery(browser)
+            if browser:
+                pychromecast.discovery.stop_discovery(browser)
 
             return ToolResult(
                 success=True,
