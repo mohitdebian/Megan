@@ -50,6 +50,7 @@ class Container:
             from tools.telegram import TelegramTool
             from tools.reminder import ReminderTool
             from tools.window import WindowTool
+            from tools.screen_vision import ScreenVisionTool
 
             registry = ToolRegistry()
             registry.register(TerminalTool(self.settings))
@@ -66,6 +67,7 @@ class Container:
             registry.register(BackgroundWorkerTool(self))
             registry.register(CheckBackgroundTasksTool(self))
             registry.register(PersonaTool(self.memory_manager()))
+            registry.register(ScreenVisionTool(self.settings))
 
             telegram_tool = TelegramTool(self.settings)
             registry.register(telegram_tool)

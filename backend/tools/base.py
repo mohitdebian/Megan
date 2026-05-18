@@ -18,9 +18,16 @@ class ToolResult:
     output: str
     error: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    content_blocks: list[dict[str, Any]] | None = None
 
-    def to_content(self) -> str:
-        """Format result for Claude context injection."""
+    def to_content(self) -> str | list[dict[str, Any]]:
+        """Format result for Claude context injection.
+        
+        Returns a string for normal tools, or a list of content blocks
+        for multimodal tools (e.g., screen vision returning images).
+        """
+        if self.content_blocks:
+            return self.content_blocks
         if self.success:
             return self.output
         return f"Error: {self.error}\n{self.output}" if self.output else f"Error: {self.error}"

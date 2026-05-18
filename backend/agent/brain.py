@@ -309,6 +309,10 @@ class AgentBrain:
                 "is_error": not result.success,
             })
 
+            # If the result contains multimodal content blocks (e.g., images),
+            # the content field will be a list of dicts instead of a string.
+            # Anthropic API accepts both formats natively.
+
         context.messages.append({
             "role": "user",
             "content": tool_results,
