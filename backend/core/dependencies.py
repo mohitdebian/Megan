@@ -208,6 +208,14 @@ class Container:
 
         return self._get_or_create("screencast_service", factory)
 
+    def email_monitor(self):
+        from services.email_monitor import EmailMonitor
+
+        def factory():
+            return EmailMonitor(self.event_bus())
+
+        return self._get_or_create("email_monitor", factory)
+
     async def initialize(self) -> None:
         """Pre-initialize critical services."""
         logger.info("container_initializing")
@@ -241,6 +249,10 @@ class Container:
         # Init screencast (stop if left running)
         sc = self.screencast_service()
         await sc.stop()
+        
+        # Start email monitor
+        em = self.email_monitor()
+        await em.start()
 
         logger.info("container_ready")
 
@@ -248,6 +260,10 @@ class Container:
         """Cleanup all services."""
         logger.info("container_shutdown")
         
+        em = self._instances.get("email_monitor")
+        if em and hasattr(em, "stop"):
+            await em.stop()
+            
         sc = self._instances.get("screencast_service")
         if sc and hasattr(sc, "stop"):
             await sc.stop()

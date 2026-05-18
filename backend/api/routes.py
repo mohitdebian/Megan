@@ -379,27 +379,34 @@ async def whatsapp_incoming(request: dict):
         asyncio.create_task(_auto_handle())
         return {"status": "auto_handled", "delegated": True}
 
-    # Not delegated — notify the user in a natural, human-like way
-    body_preview = body[:80].strip()
-    if len(body) <= 80:
-        notification = f"Hey, {name} just messaged: '{body}'. Should I reply?"
+    # Not delegated — check if it's important enough to announce
+    from core.classifier import PriorityClassifier
+    classifier = PriorityClassifier()
+    is_imp = await classifier.is_important("WhatsApp", name, body)
+
+    if is_imp:
+        body_preview = body[:80].strip()
+        if len(body) <= 80:
+            notification = f"Hey, {name} just sent an important message: '{body}'. Should I reply?"
+        else:
+            notification = (
+                f"Hey, {name} sent an important message. It starts: '{body_preview}...' "
+                f"Want me to reply, or read you the full thing?"
+            )
+
+        await event_bus.emit(
+            Event(
+                type=EventType.SYSTEM_NOTIFICATION,
+                data={
+                    "message": notification, # Note: using "message" to match frontend / websocket.py
+                    "whatsapp_reply_context": {"name": name, "number": number, "body": body},
+                },
+            )
+        )
+        return {"status": "notified_important"}
     else:
-        notification = (
-            f"Hey, {name} sent a longer message. It starts: '{body_preview}...' "
-            f"Want me to reply, or read you the full thing?"
-        )
-
-    await event_bus.emit(
-        Event(
-            type=EventType.SYSTEM_NOTIFICATION,
-            data={
-                "text": notification,
-                "whatsapp_reply_context": {"name": name, "number": number, "body": body},
-            },
-        )
-    )
-
-    return {"status": "notified"}
+        logger.info("whatsapp_ignored", sender=name, reason="low_priority")
+        return {"status": "ignored_low_priority"}
 
 
 # ─── YouTube Video Search Proxy ──────────────────────────────────────────────
