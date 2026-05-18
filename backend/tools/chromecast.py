@@ -51,12 +51,11 @@ class ChromecastTool(BaseTool):
 
             logger.info("chromecast_tool_start", action=action, target=device_name or "auto")
 
-            # Blocking call: fetch chromecasts (can take a few seconds)
-            # In a truly async architecture, we'd query the lan_monitor state,
-            # but for reliable execution here, we fetch it fresh.
-            chromecasts, browser = pychromecast.get_listed_chromecasts(
-                friendly_names=[device_name] if device_name else None
-            )
+            # Fetch all chromecasts reliably
+            chromecasts, browser = pychromecast.get_chromecasts()
+
+            if device_name:
+                chromecasts = [c for c in chromecasts if c.cast_info.friendly_name.lower() == device_name.lower()]
 
             if not chromecasts:
                 pychromecast.discovery.stop_discovery(browser)
@@ -73,32 +72,32 @@ class ChromecastTool(BaseTool):
 
             if action == "play":
                 mc.play()
-                output_msg = f"Sent PLAY command to {cast.device.friendly_name}"
+                output_msg = f"Sent PLAY command to {cast.cast_info.friendly_name}"
             elif action == "pause":
                 mc.pause()
-                output_msg = f"Sent PAUSE command to {cast.device.friendly_name}"
+                output_msg = f"Sent PAUSE command to {cast.cast_info.friendly_name}"
             elif action == "stop":
                 mc.stop()
-                output_msg = f"Sent STOP command to {cast.device.friendly_name}"
+                output_msg = f"Sent STOP command to {cast.cast_info.friendly_name}"
             elif action == "mute":
                 cast.set_volume_muted(True)
-                output_msg = f"Muted {cast.device.friendly_name}"
+                output_msg = f"Muted {cast.cast_info.friendly_name}"
             elif action == "unmute":
                 cast.set_volume_muted(False)
-                output_msg = f"Unmuted {cast.device.friendly_name}"
+                output_msg = f"Unmuted {cast.cast_info.friendly_name}"
             elif action == "volume_up":
                 cast.volume_up()
-                output_msg = f"Turned volume UP on {cast.device.friendly_name}"
+                output_msg = f"Turned volume UP on {cast.cast_info.friendly_name}"
             elif action == "volume_down":
                 cast.volume_down()
-                output_msg = f"Turned volume DOWN on {cast.device.friendly_name}"
+                output_msg = f"Turned volume DOWN on {cast.cast_info.friendly_name}"
             elif action == "set_volume":
                 try:
                     vol = float(value)
                     if vol > 1.0:
                         vol = vol / 100.0 # Handle 0-100 scale
                     cast.set_volume(vol)
-                    output_msg = f"Set volume to {vol} on {cast.device.friendly_name}"
+                    output_msg = f"Set volume to {vol} on {cast.cast_info.friendly_name}"
                 except ValueError:
                     return ToolResult(success=False, output="Invalid volume value. Must be a number.")
             elif action == "launch_youtube":
@@ -106,7 +105,7 @@ class ChromecastTool(BaseTool):
                 cast.register_handler(yt)
                 # Just launch the app for now. Playback requires actual video IDs.
                 yt.launch()
-                output_msg = f"Launched YouTube on {cast.device.friendly_name}"
+                output_msg = f"Launched YouTube on {cast.cast_info.friendly_name}"
             elif action == "cast_local_media":
                 import urllib.parse
                 from core.network_utils import get_local_ip
@@ -125,7 +124,7 @@ class ChromecastTool(BaseTool):
                 
                 mc.play_media(stream_url, content_type)
                 mc.block_until_active()
-                output_msg = f"Started streaming local file to {cast.device.friendly_name}"
+                output_msg = f"Started streaming local file to {cast.cast_info.friendly_name}"
             else:
                 pychromecast.discovery.stop_discovery(browser)
                 return ToolResult(success=False, output=f"Unknown action: {action}")
