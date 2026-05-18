@@ -64,6 +64,30 @@ Megan passively acts as a guardian for your local network.
 *   **Autonomous WhatsApp Bridge:** Megan connects to your WhatsApp. She reads incoming messages, alerts you via voice if you are at the computer, and can auto-reply to specific "delegated" contacts using her Persona memory.
 *   **Telegram Remote Control:** Send a message to your Telegram bot while you are away. Megan will execute the command on your laptop in the background and reply directly to your phone.
 
+### 7. Autonomous Importance Monitor
+Megan acts as your personal secretary, filtering the noise from your digital life.
+*   **Priority Classifier:** Every incoming WhatsApp message and email is silently evaluated by a lightweight AI classifier on a scale of 1-10. Only messages scoring 7+ are announced aloud via TTS.
+*   **Email Monitor:** A background IMAP service polls your inbox every 60 seconds. When a high-priority email arrives (e.g., from your boss, a financial alert, or a direct question), Megan announces the sender and subject.
+*   **Smart Filtering:** Spam, newsletters, and casual chatter are silently ignored. Your focus is protected.
+
+### 8. Proactive Morning Briefing & OSINT
+Megan compiles a personalized daily brief and delivers it when you sit down.
+*   **Autonomous Compilation:** At 8:00 AM, the `SystemHeartbeat` triggers the `MorningRoutine` service. It spawns a background agent that checks your unread emails, searches the web for top tech/AI news, and reads your persona memory for reminders.
+*   **First-Connect Delivery:** The compiled brief is stored until you open the Megan dashboard. The moment the WebSocket connects, Megan greets you: *"Good morning, Sir. You have 5 unread emails..."*
+
+### 9. Self-Healing Code & Autonomous Debugger
+Megan watches your code sandbox and fixes crashes before you even notice them.
+*   **File Watcher:** Using `watchdog`, Megan monitors `~/projects/sandbox/` for `.py` file saves. When a file is saved, she automatically runs it in a subprocess.
+*   **Healer Agent:** If the script exits with a traceback (TypeError, ImportError, etc.), the `HealerAgent` reads the source + error, sends it to the LLM for a patch, writes the fix back, and re-runs to verify. If successful, she announces: *"Sir, your script crashed, but I've already patched it."*
+*   **Safe Rollback:** If the LLM's patch introduces a *new* error, Megan automatically rolls back to the original file from a `.bak` backup.
+
+### 10. Multi-Agent Swarm (Delegation)
+Megan can orchestrate specialized sub-agents for complex tasks.
+*   **CEO Architecture:** When you ask Megan to write a detailed report, she doesn't do everything herself. She uses the `delegate_task` tool to spawn a pipeline of specialized agents.
+*   **Researcher Agent:** Equipped only with `web_search`. It generates focused queries, executes them via DuckDuckGo, and synthesizes raw research notes.
+*   **Writer Agent:** Takes the research notes and drafts a polished, structured markdown report (with executive summary, key findings, analysis, and conclusion). Saves it to `~/Documents/`.
+*   **Background Execution:** The entire pipeline runs asynchronously. Megan notifies you via TTS when the report is ready.
+
 ---
 
 ## 🏗️ Technical Architecture
@@ -168,6 +192,8 @@ Megan is equipped with a massive suite of tools to interact with the world. The 
 | `background_worker`| Core | Spawn detached reasoning threads for long tasks. | No |
 | `persona` | Core | Store and recall long-term memories in ChromaDB. | No |
 | `window` | Core | Spawn UI windows on the React Desktop dashboard. | No |
+| `delegate_task` | Swarm | Orchestrate Researcher + Writer sub-agents for deep research & report writing. | No |
+| `youtube` | Media | Search YouTube via Invidious API and return video IDs for casting. | No |
 
 ---
 
