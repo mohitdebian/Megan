@@ -12,6 +12,7 @@ from memory.short_term import ShortTermMemory
 from memory.long_term import LongTermMemory
 from memory.semantic import SemanticMemory
 from memory.seal_engine import SealEngine
+from memory.device_preferences import DevicePreferencesMemory
 
 logger = structlog.get_logger(__name__)
 
@@ -35,6 +36,7 @@ class MemoryManager:
         self.long_term = LongTermMemory(settings.memory.sqlite_path)
         self.semantic = SemanticMemory(settings.memory.chroma_path)
         self.seal = SealEngine(settings, self.long_term)
+        self.device_prefs = DevicePreferencesMemory(settings.data_dir)
 
     async def initialize(self) -> None:
         await self.long_term.initialize()

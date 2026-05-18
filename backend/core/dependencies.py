@@ -190,6 +190,14 @@ class Container:
 
         return self._get_or_create("network_intelligence", factory)
 
+    def heartbeat(self):
+        from services.heartbeat import SystemHeartbeat
+
+        def factory():
+            return SystemHeartbeat(self.event_bus(), self)
+
+        return self._get_or_create("heartbeat", factory)
+
     async def initialize(self) -> None:
         """Pre-initialize critical services."""
         logger.info("container_initializing")
@@ -215,12 +223,20 @@ class Container:
         # Start network intelligence scanning
         ni = self.network_intelligence()
         await ni.start_periodic_scan()
+        
+        # Start heartbeat
+        hb = self.heartbeat()
+        await hb.start()
 
         logger.info("container_ready")
 
     async def shutdown(self) -> None:
         """Cleanup all services."""
         logger.info("container_shutdown")
+        
+        hb = self._instances.get("heartbeat")
+        if hb and hasattr(hb, "stop"):
+            await hb.stop()
 
         ni = self._instances.get("network_intelligence")
         if ni and hasattr(ni, "stop_periodic_scan"):
