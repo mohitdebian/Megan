@@ -85,6 +85,9 @@ class Container:
             registry.register(telegram_tool)
             registry.register(ReminderTool(telegram_tool))
             registry.register(WindowTool())
+
+            from tools.delegate import DelegateTaskTool
+            registry.register(DelegateTaskTool(self.event_bus()))
             return registry
 
         return self._get_or_create("tool_registry", factory)
@@ -208,6 +211,22 @@ class Container:
 
         return self._get_or_create("screencast_service", factory)
 
+    def morning_routine(self):
+        from services.morning_routine import MorningRoutine
+
+        def factory():
+            return MorningRoutine(self.event_bus(), self)
+
+        return self._get_or_create("morning_routine", factory)
+
+    def code_monitor(self):
+        from services.code_monitor import CodeMonitor
+
+        def factory():
+            return CodeMonitor(self.event_bus())
+
+        return self._get_or_create("code_monitor", factory)
+
     def email_monitor(self):
         from services.email_monitor import EmailMonitor
 
@@ -254,6 +273,13 @@ class Container:
         em = self.email_monitor()
         await em.start()
 
+        # Start code monitor (autonomous debugger)
+        cm = self.code_monitor()
+        await cm.start()
+
+        # Initialize morning routine (brief compiles at 8 AM)
+        self.morning_routine()
+
         logger.info("container_ready")
 
     async def shutdown(self) -> None:
@@ -263,6 +289,10 @@ class Container:
         em = self._instances.get("email_monitor")
         if em and hasattr(em, "stop"):
             await em.stop()
+        
+        cm = self._instances.get("code_monitor")
+        if cm and hasattr(cm, "stop"):
+            await cm.stop()
             
         sc = self._instances.get("screencast_service")
         if sc and hasattr(sc, "stop"):

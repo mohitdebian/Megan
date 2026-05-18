@@ -129,6 +129,21 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         },
     })
 
+    # Check for pending morning briefing
+    try:
+        morning = container.morning_routine()
+        brief = morning.get_pending_brief()
+        if brief:
+            await event_bus.emit(
+                Event(
+                    type=EventType.SYSTEM_NOTIFICATION,
+                    data={"message": brief},
+                    conversation_id=conversation_id,
+                )
+            )
+    except Exception as e:
+        logger.warning("morning_brief_delivery_error", error=str(e))
+
     # Audio accumulation buffer for STT
     audio_buffer = b""
     processing_task: asyncio.Task | None = None

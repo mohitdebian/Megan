@@ -65,8 +65,9 @@ class SystemHeartbeat:
                     await ni.take_snapshot()
                     self._last_network_snapshot = now.isoformat()
                     
-                # 3. Memory Cleanup / Summarization
-                # (Future expansion: periodically run memory compaction)
+                # 3. Morning Routine — compile daily brief at configured hour
+                morning = self.container.morning_routine()
+                await morning.maybe_compile_brief()
                 
             except Exception as e:
                 logger.error("heartbeat_error", error=str(e))
