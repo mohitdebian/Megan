@@ -200,6 +200,14 @@ class Container:
 
         return self._get_or_create("heartbeat", factory)
 
+    def screencast_service(self):
+        from services.screencast import ScreencastService
+
+        def factory():
+            return ScreencastService(self.settings.data_dir)
+
+        return self._get_or_create("screencast_service", factory)
+
     async def initialize(self) -> None:
         """Pre-initialize critical services."""
         logger.info("container_initializing")
@@ -230,11 +238,19 @@ class Container:
         hb = self.heartbeat()
         await hb.start()
 
+        # Init screencast (stop if left running)
+        sc = self.screencast_service()
+        await sc.stop()
+
         logger.info("container_ready")
 
     async def shutdown(self) -> None:
         """Cleanup all services."""
         logger.info("container_shutdown")
+        
+        sc = self._instances.get("screencast_service")
+        if sc and hasattr(sc, "stop"):
+            await sc.stop()
         
         hb = self._instances.get("heartbeat")
         if hb and hasattr(hb, "stop"):

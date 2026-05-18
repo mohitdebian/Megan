@@ -80,6 +80,13 @@ app.add_middleware(
 # REST routes
 app.include_router(api_router)
 
+# Mount static directory for screencast HLS files
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+hls_dir = Path(settings.data_dir) / "screencast"
+hls_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/api/screencast", StaticFiles(directory=str(hls_dir)), name="screencast")
+
 # WebSocket
 app.websocket("/ws")(websocket_endpoint)
 

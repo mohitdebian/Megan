@@ -23,16 +23,19 @@ class ChromecastTool(BaseTool):
     description = (
         "Control Google Cast devices and smart TVs on the local network. "
         "Use this tool when the user asks to pause the TV, turn the volume up or down, "
-        "mute the TV, stop playback, play something on YouTube, or cast a local media file to the TV. "
+        "mute the TV, stop playback, play something on YouTube, cast a local media file to the TV, "
+        "or start/stop screencasting (live casting their computer screen to the TV). "
         "Actions: 'play', 'pause', 'stop', 'mute', 'unmute', 'volume_up', 'volume_down', "
-        "'set_volume', 'launch_youtube', 'play_youtube', 'cast_local_media', 'status'."
+        "'set_volume', 'launch_youtube', 'play_youtube', 'cast_local_media', 'status', "
+        "'start_screencast', 'stop_screencast'."
     )
     parameters = {
         "action": {
             "type": "string",
             "description": (
                 "The action to perform. One of: play, pause, stop, mute, unmute, "
-                "volume_up, volume_down, set_volume, launch_youtube, play_youtube, cast_local_media, status"
+                "volume_up, volume_down, set_volume, launch_youtube, play_youtube, "
+                "cast_local_media, status, start_screencast, stop_screencast"
             ),
             "required": True,
         },
@@ -51,11 +54,13 @@ class ChromecastTool(BaseTool):
         "play", "pause", "stop", "mute", "unmute",
         "volume_up", "volume_down", "set_volume",
         "launch_youtube", "play_youtube", "cast_local_media", "status",
+        "start_screencast", "stop_screencast",
     }
 
-    def __init__(self, settings=None, device_manager=None) -> None:
+    def __init__(self, settings=None, device_manager=None, screencast_service=None) -> None:
         self._settings = settings
         self.device_manager = device_manager
+        self.screencast_service = screencast_service
 
     def _get_cached_cast(self, device):
         """Get or create a cached pychromecast connection."""
@@ -233,6 +238,30 @@ class ChromecastTool(BaseTool):
                 mc.play_media(stream_url, content_type)
                 mc.block_until_active()
                 output_msg = f"🎬 Streaming local file to {name}"
+            elif action == "start_screencast":
+                if not self.screencast_service:
+                    return ToolResult(success=False, output="Screencast service not available.")
+                
+                from core.network_utils import get_local_ip
+                
+                # Start ffmpeg pipeline
+                playlist_path = await self.screencast_service.start()
+                
+                local_ip = get_local_ip()
+                # The static files are mounted at /api/screencast in main.py
+                stream_url = f"http://{local_ip}:8000/api/screencast/stream.m3u8"
+                
+                # Wait an extra second to ensure ffmpeg wrote the initial segment
+                await asyncio.sleep(1)
+                
+                mc.play_media(stream_url, "application/x-mpegurl")
+                mc.block_until_active()
+                output_msg = f"🖥️ Live screencast started on {name}"
+            elif action == "stop_screencast":
+                if self.screencast_service:
+                    await self.screencast_service.stop()
+                mc.stop()
+                output_msg = f"⏹️ Screencast stopped on {name}"
             else:
                 return ToolResult(success=False, output=f"Unhandled action: {action}")
 
