@@ -227,6 +227,14 @@ class Container:
 
         return self._get_or_create("code_monitor", factory)
 
+    def awareness_engine(self):
+        from services.awareness import AwarenessEngine
+
+        def factory():
+            return AwarenessEngine(self.event_bus())
+
+        return self._get_or_create("awareness_engine", factory)
+
     def email_monitor(self):
         from services.email_monitor import EmailMonitor
 
@@ -276,6 +284,10 @@ class Container:
         # Start code monitor (autonomous debugger)
         cm = self.code_monitor()
         await cm.start()
+        
+        # Start awareness engine
+        ae = self.awareness_engine()
+        await ae.start()
 
         # Initialize morning routine (brief compiles at 8 AM)
         self.morning_routine()
@@ -293,6 +305,10 @@ class Container:
         cm = self._instances.get("code_monitor")
         if cm and hasattr(cm, "stop"):
             await cm.stop()
+            
+        ae = self._instances.get("awareness_engine")
+        if ae and hasattr(ae, "stop"):
+            await ae.stop()
             
         sc = self._instances.get("screencast_service")
         if sc and hasattr(sc, "stop"):
