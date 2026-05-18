@@ -74,7 +74,7 @@ class Container:
             registry.register(CheckBackgroundTasksTool(self))
             registry.register(PersonaTool(self.memory_manager()))
             registry.register(ScreenVisionTool(self.settings))
-            registry.register(ChromecastTool(self.settings, self.device_manager()))
+            registry.register(ChromecastTool(self.settings, self.device_manager(), self.screencast_service()))
             registry.register(SceneTool(self.scene_manager()))
             registry.register(NetworkIntelligenceTool(self.device_manager()))
             registry.register(MediaTool(self.media_library()))
