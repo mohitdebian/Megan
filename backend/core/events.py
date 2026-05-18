@@ -45,6 +45,10 @@ class EventType(str, Enum):
     ERROR = "error"
     SYSTEM_NOTIFICATION = "system_notification"
 
+    # Network
+    NETWORK_DEVICE_DISCOVERED = "network_device_discovered"
+    NETWORK_DEVICE_LOST = "network_device_lost"
+
 
 @dataclass
 class Event:

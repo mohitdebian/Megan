@@ -51,6 +51,7 @@ class Container:
             from tools.reminder import ReminderTool
             from tools.window import WindowTool
             from tools.screen_vision import ScreenVisionTool
+            from tools.chromecast import ChromecastTool
 
             registry = ToolRegistry()
             registry.register(TerminalTool(self.settings))
@@ -68,6 +69,7 @@ class Container:
             registry.register(CheckBackgroundTasksTool(self))
             registry.register(PersonaTool(self.memory_manager()))
             registry.register(ScreenVisionTool(self.settings))
+            registry.register(ChromecastTool(self.settings))
 
             telegram_tool = TelegramTool(self.settings)
             registry.register(telegram_tool)
@@ -132,12 +134,25 @@ class Container:
 
         return self._get_or_create("stream_manager", factory)
 
+    def lan_monitor(self):
+        from services.lan_monitor import LANMonitor
+
+        def factory():
+            return LANMonitor(self.event_bus())
+
+        return self._get_or_create("lan_monitor", factory)
+
     async def initialize(self) -> None:
         """Pre-initialize critical services."""
         logger.info("container_initializing")
         memory = self.memory_manager()
         await memory.initialize()
         self.tool_registry()  # Register all tools
+        
+        # Start LAN discovery
+        monitor = self.lan_monitor()
+        await monitor.start()
+        
         logger.info("container_ready")
 
     async def shutdown(self) -> None:
@@ -146,6 +161,10 @@ class Container:
         memory = self._instances.get("memory_manager")
         if memory and hasattr(memory, "close"):
             await memory.close()
+            
+        lan = self._instances.get("lan_monitor")
+        if lan and hasattr(lan, "stop"):
+            await lan.stop()
 
 
 # Singleton
