@@ -25,20 +25,20 @@ class ChromecastTool(BaseTool):
         "Use this tool when the user asks to pause the TV, turn the volume up or down, "
         "mute the TV, stop playback, play something on YouTube, or cast a local media file to the TV. "
         "Actions: 'play', 'pause', 'stop', 'mute', 'unmute', 'volume_up', 'volume_down', "
-        "'set_volume', 'launch_youtube', 'cast_local_media', 'status'."
+        "'set_volume', 'launch_youtube', 'play_youtube', 'cast_local_media', 'status'."
     )
     parameters = {
         "action": {
             "type": "string",
             "description": (
                 "The action to perform. One of: play, pause, stop, mute, unmute, "
-                "volume_up, volume_down, set_volume, launch_youtube, cast_local_media, status"
+                "volume_up, volume_down, set_volume, launch_youtube, play_youtube, cast_local_media, status"
             ),
             "required": True,
         },
         "value": {
             "type": "string",
-            "description": "Optional value. Volume level (0-100) for set_volume, or absolute file path for cast_local_media.",
+            "description": "Optional value. Volume level (0-100) for set_volume, video_id for play_youtube, or absolute file path for cast_local_media.",
         },
         "device_name": {
             "type": "string",
@@ -50,7 +50,7 @@ class ChromecastTool(BaseTool):
     VALID_ACTIONS = {
         "play", "pause", "stop", "mute", "unmute",
         "volume_up", "volume_down", "set_volume",
-        "launch_youtube", "cast_local_media", "status",
+        "launch_youtube", "play_youtube", "cast_local_media", "status",
     }
 
     def __init__(self, settings=None, device_manager=None) -> None:
@@ -196,6 +196,16 @@ class ChromecastTool(BaseTool):
                 cast.register_handler(yt)
                 yt.launch()
                 output_msg = f"📺 Launched YouTube on {name}"
+            elif action == "play_youtube":
+                if not value:
+                    return ToolResult(
+                        success=False,
+                        output="Provide the YouTube video_id in 'value' for play_youtube.",
+                    )
+                yt = YouTubeController()
+                cast.register_handler(yt)
+                yt.play_video(value)
+                output_msg = f"📺 Playing YouTube video {value} on {name}"
             elif action == "cast_local_media":
                 import urllib.parse
                 from core.network_utils import get_local_ip

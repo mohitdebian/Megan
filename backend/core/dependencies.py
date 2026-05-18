@@ -56,6 +56,7 @@ class Container:
             from tools.network import NetworkIntelligenceTool
             from tools.media_tool import MediaTool
             from tools.security_tool import SecurityTool
+            from tools.youtube import YouTubeTool
 
             registry = ToolRegistry()
             registry.register(TerminalTool(self.settings))
@@ -78,6 +79,7 @@ class Container:
             registry.register(NetworkIntelligenceTool(self.device_manager()))
             registry.register(MediaTool(self.media_library()))
             registry.register(SecurityTool(self.network_intelligence()))
+            registry.register(YouTubeTool())
 
             telegram_tool = TelegramTool(self.settings)
             registry.register(telegram_tool)
