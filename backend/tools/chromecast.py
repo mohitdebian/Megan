@@ -59,18 +59,18 @@ class ChromecastTool(BaseTool):
             # Check known devices from LAN monitor instantly
             devices = list(self.lan_monitor.active_devices.values()) if self.lan_monitor else []
             
-            target_ip = None
+            matched_device = None
             if devices:
                 if device_name:
                     target = device_name.lower()
                     for d in devices:
                         if target in d["friendly_name"].lower() or target in d["model"].lower() or target in d["id"].lower():
-                            target_ip = d["ip"]
+                            matched_device = d
                             break
                 else:
-                    target_ip = devices[0]["ip"]
+                    matched_device = devices[0]
 
-            if not target_ip:
+            if not matched_device:
                 # Fallback to slow discovery if LAN monitor is empty or missing
                 chromecasts, browser = pychromecast.get_chromecasts()
                 if device_name:
@@ -91,9 +91,17 @@ class ChromecastTool(BaseTool):
                     )
                 cast = chromecasts[0]
             else:
-                # Instant connection via IP
-                logger.info("chromecast_connecting_direct", ip=target_ip)
-                cast = pychromecast.Chromecast(target_ip)
+                # Instant connection via IP using get_chromecast_from_host
+                import uuid as uuid_mod
+                logger.info("chromecast_connecting_direct", ip=matched_device["ip"], name=matched_device["friendly_name"])
+                device_uuid = uuid_mod.UUID(matched_device["uuid"]) if matched_device.get("uuid") else uuid_mod.uuid4()
+                cast = pychromecast.get_chromecast_from_host((
+                    matched_device["ip"],
+                    matched_device["port"],
+                    device_uuid,
+                    matched_device.get("model"),
+                    matched_device.get("friendly_name"),
+                ))
                 browser = None
 
             cast.wait()

@@ -81,14 +81,16 @@ class LANMonitor:
                     
             device_name = properties.get("fn", name.split(".")[0])
             model_name = properties.get("md", "Unknown Cast Device")
+            device_uuid = properties.get("id", "")
             ip_address = ".".join(map(str, info.addresses[0])) if info.addresses else "Unknown"
             
             device_data = {
                 "id": name,
                 "friendly_name": device_name,
                 "model": model_name,
+                "uuid": device_uuid,
                 "ip": ip_address,
-                "port": info.port,
+                "port": info.port or 8009,
                 "type": "chromecast"
             }
             
