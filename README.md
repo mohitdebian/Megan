@@ -1,126 +1,185 @@
 <div align="center">
-  <h1 align="center">MEGAN_OS</h1>
+  <img src="https://raw.githubusercontent.com/mohitdebian/Megan/main/frontend/public/megan-logo.png" alt="Megan OS Logo" width="150" />
+  <h1 align="center">MEGAN OS</h1>
   <p align="center">
     <strong>A fully autonomous, voice-native, agentic operating system assistant.</strong>
     <br />
     <br />
-    <a href="#features">Features</a>
+    <a href="#overview">Overview</a>
+    ·
+    <a href="#core-capabilities">Core Capabilities</a>
     ·
     <a href="#architecture">Architecture</a>
     ·
-    <a href="#getting-started">Getting Started</a>
+    <a href="#installation-guide">Installation</a>
     ·
-    <a href="#tools">Tools</a>
+    <a href="#tool-reference">Tool Reference</a>
   </p>
 </div>
 
-## What is Megan?
-Megan is an advanced AI-native operating system designed to act as a **Jarvis-like** assistant. Instead of just answering questions, Megan actively operates your computer, browses the web, reads your codebase, answers your WhatsApp messages, and can even be remote-controlled from your phone via Telegram. 
+---
 
-Powered by **LangGraph V2** and advanced **Thinking Models**, Megan operates continuously, features real-time Voice-to-Voice (V2V) interruption capabilities, and sports a stunning real-time Desktop UI dashboard.
+## 🌌 Overview
+
+Megan is not a simple chatbot; she is an advanced AI-native operating system built to act as a fully autonomous **Jarvis-like assistant**. Designed to seamlessly blend into your physical and digital environment, Megan actively operates your computer, controls your smart home devices, manages your local media, monitors network security, and acts as a bridge for your social communications.
+
+Powered by **LangGraph V2** and advanced **Thinking Models**, Megan operates continuously in the background, features real-time Voice-to-Voice (V2V) interruption capabilities, and sports a stunning Sci-Fi inspired React UI dashboard.
 
 ---
 
-## 🔥 Features
+## 🔥 Core Capabilities & Features
 
-- 🗣️ **Real-time Voice-to-Voice (V2V)**: Speak to Megan naturally. She listens constantly, streams high-fidelity TTS audio back instantly using ElevenLabs/Nvidia, and gracefully handles interruptions.
-- 📱 **Telegram Remote Control**: Send a message to your Telegram bot while you are away from your laptop. Megan will execute the command on your machine in the background and reply directly to your phone.
-- 💬 **Autonomous WhatsApp Bridge**: Megan connects to your WhatsApp, reads incoming messages, alerts you via voice if you are at the computer, and can auto-reply to specific "delegated" contacts using her Persona memory.
-- 💻 **Computer Control Tools**: Deep integration with your OS. Megan can execute terminal commands, edit files, manage your clipboard, launch applications, and view system metrics.
-- 🌐 **Web Browsing & Codebase Search**: Full browser control for complex web research, combined with codebase vector-search capabilities.
-- 🧠 **Persistent Persona Memory**: Megan remembers details about you and the people you interact with. She maintains a persistent knowledge graph across sessions in her SQLite/ChromaDB memory bank.
-- 🖥️ **Sci-Fi Desktop Dashboard**: A beautiful, real-time React UI that visualizes Megan's "Logic Stream", system metrics, active background tasks, and dynamically spawns "Windows" (like YouTube players, code snippets, or news feeds) onto the screen at her discretion.
-- 🔄 **Background Workers**: Ask Megan to run long research tasks "in the background". She will spawn a detached reasoning thread and notify you via voice when she's done.
+### 1. Voice-Native Interaction & Real-Time UI
+*   **Real-time Voice-to-Voice (V2V):** Speak to Megan naturally. She listens constantly via WebSockets, streams high-fidelity TTS audio back instantly using ElevenLabs or Nvidia engines, and gracefully handles conversational interruptions.
+*   **Sci-Fi Desktop Dashboard:** A beautiful, real-time React UI that visualizes Megan's internal "Logic Stream", system metrics, and active background tasks. Megan can dynamically spawn "Windows" (like YouTube players, code snippets, maps, or news feeds) directly onto the screen at her discretion.
+
+### 2. Autonomous Environment Orchestration (Smart Home)
+Megan maps and controls the physical room she is in using a persistent `DeviceManager`.
+*   **Persistent Device Intelligence:** Instead of scanning the network for every request, Megan maintains a persistent registry of all LAN devices. She tracks MAC addresses, caches IP connections, and performs 30-second health pings to instantly know when a device turns on or off.
+*   **Fuzzy Matching & Auto-routing:** You don't need exact IP addresses. Say *"Pause the QLED"* or *"Mute the TV"* and Megan uses fuzzy logic to route the command to the correct physical device.
+*   **Advanced Scene Engine:** Built-in support for chained actions, delays, and state rollbacks. 
+    *   *Movie Mode:* Dims the dashboard UI, sets TV volume to 30%, and sends a phone notification.
+    *   *Sleep Mode:* Lowers TV volume to 5%, waits 2 seconds, and stops playback entirely.
+    *   *Auto-Deactivate:* If a device goes offline unexpectedly, Megan rolls back the active scene automatically.
+
+### 3. Unified Local Media Ecosystem
+Megan serves as a personalized streaming server for your local files and online content.
+*   **Local Media Indexing:** Automatically scans your `~/Videos`, `~/Movies`, `~/Downloads`, and `~/Music` directories. Uses `ffprobe` to extract metadata (duration, resolution, codecs).
+*   **Watch History & Resume:** If you stop casting a movie halfway through, Megan remembers exactly where you left off. Ask her to *"Resume the Matrix movie"* and it starts from the exact timestamp.
+*   **Live YouTube Search & Cast:** Using an ad-free Invidious API proxy, Megan can autonomously search YouTube for queries like *"Play Bollywood music"*, grab the exact `videoId`, and cast it to your TV automatically.
+*   **Live Desktop Screencasting:** Megan can mirror your Linux desktop to your TV. She uses a custom Python `mss` loop to grab raw pixel frames, piping them dynamically into `ffmpeg` to encode a low-latency HTTP Live Stream (HLS) that your Chromecast can connect to.
+
+### 4. Cybersecurity & Network Intelligence
+Megan passively acts as a guardian for your local network.
+*   **ARP Topology Mapping:** She constantly sniffs the system ARP table to map every connected device in real-time.
+*   **Non-Intrusive Fingerprinting:** She runs localized port scans to categorize devices (e.g., Apple Airplay, Media Server, Generic Web Device).
+*   **Trust Scoring:** Devices are given a trust score out of 100 based on their MAC address history. If a new, unknown device joins your network, Megan's `AutomationEngine` will trigger an immediate alert.
+
+### 5. Memory & Autonomous Behaviors
+*   **Device Preferences Memory:** Megan learns your habits. She remembers your preferred default TV, the average volume you listen at, and the scenes you trigger most often.
+*   **System Heartbeat:** A background cron-like service that runs autonomously. It triggers media library rescans every 6 hours, network topology snapshots every 24 hours, and handles late-night volume reminders.
+*   **Persona Knowledge Graph:** Megan remembers personal details about you and the people you interact with. She maintains a persistent knowledge graph across sessions in her SQLite/ChromaDB memory bank.
+
+### 6. Delegated Communication
+*   **Autonomous WhatsApp Bridge:** Megan connects to your WhatsApp. She reads incoming messages, alerts you via voice if you are at the computer, and can auto-reply to specific "delegated" contacts using her Persona memory.
+*   **Telegram Remote Control:** Send a message to your Telegram bot while you are away. Megan will execute the command on your laptop in the background and reply directly to your phone.
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Technical Architecture
 
-Megan consists of three main components:
+Megan's architecture is highly decoupled, event-driven, and relies on Dependency Injection for seamless testing and extensibility.
 
-1. **Backend (`/backend`)**: A **FastAPI** Python server that houses the `AgentBrain` (LangGraph state machine), handles WebSocket connections, manages ChromaDB vector memory, and integrates with TTS/STT APIs.
-2. **Frontend (`/frontend`)**: A **React + Vite + TailwindCSS** web application that provides the futuristic Desktop UI. It connects to the backend via WebSockets.
-3. **WhatsApp Bridge (`/whatsapp-bridge`)**: A lightweight **Node.js** server utilizing `whatsapp-web.js` that syncs WhatsApp events to the backend.
+### System Components
+
+1.  **Backend (`/backend`)**: A **FastAPI** Python server that houses the `AgentBrain` (LangGraph state machine).
+    *   **EventBus:** A centralized pub/sub system. Services (like `LANMonitor`, `MediaLibrary`) emit events (e.g., `DEVICE_OFFLINE`), which the `AutomationEngine` listens to.
+    *   **MemoryManager:** Handles Short-Term (conversational context), Long-Term (SQLite structured data), Semantic (ChromaDB vector embeddings), and Device Preferences memory.
+    *   **Lifespan Management:** Uses a DI `Container` to ensure background workers (Heartbeat, Network Scanners) initialize safely on boot and shutdown cleanly.
+
+2.  **Frontend (`/frontend`)**: A **React + Vite + TailwindCSS** SPA.
+    *   **WebSocket Link:** Connects to the backend for real-time state updates, UI window spawning, and voice streaming.
+    *   **Audio Engine:** Uses `AudioContext` to handle bidirectional V2V streaming with proper echo cancellation and VAD (Voice Activity Detection).
+
+3.  **WhatsApp Bridge (`/whatsapp-bridge`)**: A **Node.js** microservice using `whatsapp-web.js`.
+    *   Syncs WhatsApp events to the FastAPI backend via HTTP webhooks.
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Installation & Setup Guide
 
 ### Prerequisites
-- **Python 3.10+**
-- **Node.js 18+**
-- **API Keys**: You will need keys for Claude/OpenAI (via proxy), Nvidia TTS or ElevenLabs, and optionally a Telegram Bot Token.
+- **OS:** Linux (Ubuntu/Debian recommended for full OS integration).
+- **Python:** 3.10 or higher.
+- **Node.js:** 18 or higher.
+- **Packages:** `ffmpeg` (required for media streaming and screencasting).
+- **API Keys:** Claude/OpenAI (for the reasoning engine), ElevenLabs (for TTS), and optionally a Telegram Bot Token.
 
-### 1. Clone the repository
+### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/yourusername/megan-os.git
-cd megan-os
+git clone https://github.com/mohitdebian/Megan.git
+cd Megan
 ```
 
-### 2. Environment Setup
-Copy the example environment file and fill in your keys:
-```bash
-cp .env.example .env
-```
-Ensure you provide a valid Telegram Chat ID and Bot Token if you want to use the remote control feature.
-
-### 3. Backend Setup (FastAPI)
-Navigate to the backend directory, install dependencies, and start the server:
+### Step 2: Environment Configuration
+Copy the template and fill in your keys.
 ```bash
 cd backend
+cp .env.example .env
+```
+Ensure you provide a valid `OPENAI_API_KEY` (or equivalent proxy) and `ELEVENLABS_API_KEY`. If you want remote control, add your `TELEGRAM_BOT_TOKEN`.
+
+### Step 3: Backend Setup
+Install system dependencies (if on Debian/Ubuntu):
+```bash
+sudo apt update
+sudo apt install ffmpeg
+```
+
+Set up the Python virtual environment and run the server:
+```bash
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-python main.py
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
-*The backend runs on `http://localhost:8000`.*
 
-### 4. Frontend Setup (React/Vite)
-Open a new terminal, navigate to the frontend directory, install packages, and start the UI:
+### Step 4: Frontend Setup
+In a new terminal window, start the Vite development server:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-*The frontend runs on `http://localhost:5173`.*
+Open your browser to `http://localhost:5173`. You should see the Megan OS Dashboard.
 
-### 5. WhatsApp Bridge Setup (Optional)
-If you want WhatsApp integration, start the Node.js bridge in a separate terminal:
+### Step 5: WhatsApp Bridge (Optional)
+If you wish to enable WhatsApp integration:
 ```bash
 cd whatsapp-bridge
 npm install
 node server.js
 ```
-Scan the QR code printed in the terminal to link your WhatsApp account.
+Scan the QR code printed in the terminal with your phone to link the bridge.
 
 ---
 
-## 🛠️ Tools
+## 🛠️ Comprehensive Tool Reference
 
-Megan is equipped with a massive suite of tools to interact with the world:
+Megan is equipped with a massive suite of tools to interact with the world. The LLM agent autonomously decides when and how to use these tools based on your requests.
 
-| Tool | Description | Dangerous? |
-|------|-------------|:----------:|
-| `terminal` | Execute arbitrary shell commands | ⚠️ Yes |
-| `filesystem` | Read/write/list/search files | No |
-| `web_search` | Search the web autonomously | No |
-| `browser` | Fetch and read web pages | No |
-| `code_executor` | Run Python/JS/Bash code | ⚠️ Yes |
-| `clipboard` | Read/write system clipboard | No |
-| `app_launcher` | Open apps and files on the host OS | No |
-| `system_info` | CPU, memory, disk, processes | No |
-| `codebase` | Repository vector search + analysis | No |
-| `whatsapp` | Send/Reply to WhatsApp messages | No |
-| `telegram` | Send messages to the user via Telegram | No |
-| `background_worker` | Spawn detached agent threads | No |
-| `persona` | Store/recall long-term memories | No |
-| `window` | Spawn UI windows on the Desktop dashboard | No |
+| Tool | Category | Description | Dangerous? |
+|------|----------|-------------|:----------:|
+| `chromecast` | Environment | Control Google Cast devices (play, pause, volume). Search and cast YouTube videos. Live screencast the desktop. | No |
+| `scene_manager` | Environment | Activate orchestrated room scenes (Movie, Gaming, Sleep, etc.) | No |
+| `media_tool` | Environment | Search local media library, resume watched videos, get AI recommendations. | No |
+| `security_tool` | Network | Generate network trust reports, show LAN topology, port scan devices. | No |
+| `terminal` | System | Execute arbitrary shell (Bash) commands on the host OS. | ⚠️ Yes |
+| `filesystem` | System | Read, write, list, and search files locally. | No |
+| `app_launcher` | System | Open desktop applications and files. | No |
+| `system_info` | System | Fetch CPU, memory, disk usage, and process lists. | No |
+| `screen_vision` | Vision | Takes a screenshot of the desktop using `mss` and sends it to the vision model for analysis. | No |
+| `web_search` | Internet | Search the web autonomously via DuckDuckGo/Tavily. | No |
+| `browser` | Internet | Fetch and read web pages, bypass basic anti-bot screens. | No |
+| `codebase` | Dev | Semantic vector search across the entire Megan codebase. | No |
+| `code_executor` | Dev | Run Python/JS code in an isolated subprocess. | ⚠️ Yes |
+| `whatsapp` | Comms | Send or reply to WhatsApp messages. | No |
+| `telegram` | Comms | Send messages to the user via Telegram. | No |
+| `background_worker`| Core | Spawn detached reasoning threads for long tasks. | No |
+| `persona` | Core | Store and recall long-term memories in ChromaDB. | No |
+| `window` | Core | Spawn UI windows on the React Desktop dashboard. | No |
 
 ---
 
 ## 🔒 Safety & Permissions
-Megan can run arbitrary terminal commands and modify your filesystem. **Use with caution.** 
-By default, destructive commands will trigger a "Confirmation Request" that pops up in the UI, requiring you to click "Approve" or "Deny" before Megan can execute them.
+
+Megan is designed to be an **agentic OS**, which means she has the ability to run arbitrary terminal commands, modify your filesystem, and interact with the local network. 
+
+**Use with caution.** 
+
+By default, any destructive commands (via `terminal` or `code_executor`) will trigger a **Confirmation Request**. This request will pop up in the React UI, pausing the agent's execution thread, and requiring you to explicitly click "Approve" or "Deny" before Megan can execute the command. Do not disable this safeguard unless you are running Megan in an isolated VM or container.
+
+---
 
 ## 📄 License
-This project is licensed under the [MIT License](LICENSE). Feel free to fork, modify, and build your own JARVIS!
+This project is licensed under the [MIT License](LICENSE). Feel free to fork, modify, and build your own autonomous JARVIS!
