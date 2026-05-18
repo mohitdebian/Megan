@@ -55,7 +55,14 @@ class ChromecastTool(BaseTool):
             chromecasts, browser = pychromecast.get_chromecasts()
 
             if device_name:
-                chromecasts = [c for c in chromecasts if c.cast_info.friendly_name.lower() == device_name.lower()]
+                filtered = []
+                target = device_name.lower()
+                for c in chromecasts:
+                    if (target in c.cast_info.friendly_name.lower() or 
+                        target in str(c.cast_info.uuid).lower() or
+                        target in c.cast_info.model_name.lower()):
+                        filtered.append(c)
+                chromecasts = filtered
 
             if not chromecasts:
                 pychromecast.discovery.stop_discovery(browser)
