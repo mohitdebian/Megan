@@ -71,9 +71,9 @@ class Container:
             registry.register(CheckBackgroundTasksTool(self))
             registry.register(PersonaTool(self.memory_manager()))
             registry.register(ScreenVisionTool(self.settings))
-            registry.register(ChromecastTool(self.settings, self.lan_monitor()))
+            registry.register(ChromecastTool(self.settings, self.device_manager()))
             registry.register(SceneTool(self.scene_manager()))
-            registry.register(NetworkIntelligenceTool(self.lan_monitor()))
+            registry.register(NetworkIntelligenceTool(self.device_manager()))
 
             telegram_tool = TelegramTool(self.settings)
             registry.register(telegram_tool)
@@ -138,11 +138,19 @@ class Container:
 
         return self._get_or_create("stream_manager", factory)
 
+    def device_manager(self):
+        from services.device_manager import DeviceManager
+
+        def factory():
+            return DeviceManager(self.event_bus(), self.settings.data_dir)
+
+        return self._get_or_create("device_manager", factory)
+
     def lan_monitor(self):
         from services.lan_monitor import LANMonitor
 
         def factory():
-            return LANMonitor(self.event_bus())
+            return LANMonitor(self.event_bus(), self.device_manager())
 
         return self._get_or_create("lan_monitor", factory)
 
@@ -154,26 +162,49 @@ class Container:
 
         return self._get_or_create("scene_manager", factory)
 
+    def automation_engine(self):
+        from services.automation_engine import AutomationEngine
+
+        def factory():
+            return AutomationEngine(self.event_bus(), self.settings)
+
+        return self._get_or_create("automation_engine", factory)
+
     async def initialize(self) -> None:
         """Pre-initialize critical services."""
         logger.info("container_initializing")
         memory = self.memory_manager()
         await memory.initialize()
         self.tool_registry()  # Register all tools
-        
-        # Start LAN discovery
+
+        # Start LAN discovery & device health monitoring
         monitor = self.lan_monitor()
         await monitor.start()
-        
+        dm = self.device_manager()
+        await dm.start_health_monitor()
+
+        # Start automation engine
+        engine = self.automation_engine()
+        await engine.start()
+
         logger.info("container_ready")
 
     async def shutdown(self) -> None:
         """Cleanup all services."""
         logger.info("container_shutdown")
+
+        engine = self._instances.get("automation_engine")
+        if engine and hasattr(engine, "stop"):
+            await engine.stop()
+
         memory = self._instances.get("memory_manager")
         if memory and hasattr(memory, "close"):
             await memory.close()
-            
+
+        dm = self._instances.get("device_manager")
+        if dm and hasattr(dm, "stop_health_monitor"):
+            await dm.stop_health_monitor()
+
         lan = self._instances.get("lan_monitor")
         if lan and hasattr(lan, "stop"):
             await lan.stop()

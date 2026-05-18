@@ -45,9 +45,25 @@ class EventType(str, Enum):
     ERROR = "error"
     SYSTEM_NOTIFICATION = "system_notification"
 
-    # Network
+    # Network & Devices
     NETWORK_DEVICE_DISCOVERED = "network_device_discovered"
     NETWORK_DEVICE_LOST = "network_device_lost"
+    DEVICE_ONLINE = "device_online"
+    DEVICE_OFFLINE = "device_offline"
+    DEVICE_HEALTH_CHECK = "device_health_check"
+
+    # Scenes & Automation
+    SCENE_ACTIVATED = "scene_activated"
+    SCENE_DEACTIVATED = "scene_deactivated"
+
+    # Media
+    PLAYBACK_STARTED = "playback_started"
+    PLAYBACK_STOPPED = "playback_stopped"
+    MEDIA_QUEUE_UPDATED = "media_queue_updated"
+
+    # Security
+    SECURITY_ALERT = "security_alert"
+    NEW_UNKNOWN_DEVICE = "new_unknown_device"
 
 
 @dataclass
