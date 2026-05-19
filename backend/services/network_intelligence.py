@@ -96,20 +96,21 @@ class NetworkIntelligence:
             except Exception as e:
                 logger.warning("network_topology_load_failed", error=str(e))
 
-    def _save_topology(self):
+    async def _save_topology(self):
         """Persist topology to disk."""
         try:
+            import aiofiles
             self._topology_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self._topology_path, "w") as f:
-                json.dump(
+            async with aiofiles.open(self._topology_path, "w") as f:
+                content = json.dumps(
                     {
                         "nodes": {k: v.to_dict() for k, v in self._nodes.items()},
                         "known_macs": list(self._known_macs),
                         "last_updated": datetime.now(timezone.utc).isoformat(),
                     },
-                    f,
                     indent=2,
                 )
+                await f.write(content)
         except Exception as e:
             logger.warning("network_topology_save_failed", error=str(e))
 
@@ -164,7 +165,7 @@ class NetworkIntelligence:
                 )
             )
 
-        self._save_topology()
+        await self._save_topology()
 
         return {
             "total_devices": len(self._nodes),
@@ -261,16 +262,17 @@ class NetworkIntelligence:
 
     async def take_snapshot(self):
         """Save a timestamped snapshot of the current topology."""
+        import aiofiles
         self._snapshot_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         path = self._snapshot_dir / f"snapshot_{timestamp}.json"
 
-        with open(path, "w") as f:
-            json.dump(
+        async with aiofiles.open(path, "w") as f:
+            content = json.dumps(
                 {k: v.to_dict() for k, v in self._nodes.items()},
-                f,
                 indent=2,
             )
+            await f.write(content)
         logger.info("network_snapshot_saved", path=str(path))
 
     async def start_periodic_scan(self, interval: int = 300):

@@ -42,65 +42,72 @@ class ScreenVisionTool(BaseTool):
 
     async def execute(self, query: str = "", monitor: int = 1, **_) -> ToolResult:
         try:
-            import mss
-            from PIL import Image
+            import asyncio
+            def _capture():
+                import mss
+                from PIL import Image
+    
+                with mss.MSS() as sct:
+                    # Validate monitor index
+                    mon_idx = monitor
+                    if mon_idx < 1 or mon_idx >= len(sct.monitors):
+                        mon_idx = 1
+    
+                    mon = sct.monitors[mon_idx]
+                    logger.info(
+                        "screen_capture_start",
+                        monitor=mon_idx,
+                        width=mon["width"],
+                        height=mon["height"],
+                    )
+    
+                    # Grab the screen
+                    sct_img = sct.grab(mon)
+    
+                    # Convert to PIL Image
+                    img = Image.frombytes("RGB", sct_img.size, sct_img.bgra, "raw", "BGRX")
+    
+                    # Downscale if larger than 1920x1080 to save tokens/bandwidth
+                    max_w, max_h = 1920, 1080
+                    if img.width > max_w or img.height > max_h:
+                        img.thumbnail((max_w, max_h), Image.LANCZOS)
+    
+                    # Compress to JPEG
+                    buffer = BytesIO()
+                    img.save(buffer, format="JPEG", quality=75)
+                    b64_data = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    
+                    logger.info(
+                        "screen_capture_done",
+                        size_kb=round(len(b64_data) * 3 / 4 / 1024, 1),
+                        resolution=f"{img.width}x{img.height}",
+                    )
+                    
+                    return b64_data, img.width, img.height
 
-            with mss.MSS() as sct:
-                # Validate monitor index
-                if monitor < 1 or monitor >= len(sct.monitors):
-                    monitor = 1
+            b64_data, width, height = await asyncio.to_thread(_capture)
 
-                mon = sct.monitors[monitor]
-                logger.info(
-                    "screen_capture_start",
-                    monitor=monitor,
-                    width=mon["width"],
-                    height=mon["height"],
-                )
-
-                # Grab the screen
-                sct_img = sct.grab(mon)
-
-                # Convert to PIL Image
-                img = Image.frombytes("RGB", sct_img.size, sct_img.bgra, "raw", "BGRX")
-
-                # Downscale if larger than 1920x1080 to save tokens/bandwidth
-                max_w, max_h = 1920, 1080
-                if img.width > max_w or img.height > max_h:
-                    img.thumbnail((max_w, max_h), Image.LANCZOS)
-
-                # Compress to JPEG
-                buffer = BytesIO()
-                img.save(buffer, format="JPEG", quality=75)
-                b64_data = base64.b64encode(buffer.getvalue()).decode("utf-8")
-
-                logger.info(
-                    "screen_capture_done",
-                    size_kb=round(len(b64_data) * 3 / 4 / 1024, 1),
-                    resolution=f"{img.width}x{img.height}",
-                )
-
-                # Build Anthropic-compatible multimodal content blocks
-                content_blocks = [
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "image/jpeg",
-                            "data": b64_data,
-                        },
+            # Build Anthropic-compatible multimodal content blocks
+            content_blocks = [
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "image/jpeg",
+                        "data": b64_data,
                     },
-                    {
-                        "type": "text",
-                        "text": f"The above is a live screenshot of the user's screen. The user asked: \"{query}\". Please analyze the screenshot and respond to their question.",
-                    },
-                ]
+                },
+                {
+                    "type": "text",
+                    "text": f"The above is a live screenshot of the user's screen. The user asked: \"{query}\". Please analyze the screenshot and respond to their question.",
+                },
+            ]
 
-                return ToolResult(
-                    success=True,
-                    output=f"[Screenshot captured: {img.width}x{img.height}]",
-                    content_blocks=content_blocks,
-                )
+            return ToolResult(
+                success=True,
+                output=f"[Screenshot captured: {width}x{height}]",
+                content_blocks=content_blocks,
+            )
 
         except ImportError:
             return ToolResult(

@@ -62,10 +62,11 @@ class ChromecastTool(BaseTool):
         self.device_manager = device_manager
         self.screencast_service = screencast_service
 
-    def _get_cached_cast(self, device):
+    async def _get_cached_cast(self, device):
         """Get or create a cached pychromecast connection."""
         import pychromecast
         import uuid as uuid_mod
+        import asyncio
 
         cached = _cast_cache.get(device.uuid)
         if cached:
@@ -78,16 +79,20 @@ class ChromecastTool(BaseTool):
             # Dead connection, remove from cache
             _cast_cache.pop(device.uuid, None)
 
-        # Create new connection
-        device_uuid = uuid_mod.UUID(device.uuid) if len(device.uuid) == 32 else uuid_mod.uuid4()
-        cast = pychromecast.get_chromecast_from_host((
-            device.ip,
-            device.port,
-            device_uuid,
-            device.model,
-            device.friendly_name,
-        ))
-        cast.wait()
+        def _connect():
+            # Create new connection
+            device_uuid = uuid_mod.UUID(device.uuid) if len(device.uuid) == 32 else uuid_mod.uuid4()
+            cast = pychromecast.get_chromecast_from_host((
+                device.ip,
+                device.port,
+                device_uuid,
+                device.model,
+                device.friendly_name,
+            ))
+            cast.wait()
+            return cast
+
+        cast = await asyncio.to_thread(_connect)
         _cast_cache[device.uuid] = cast
         return cast
 
@@ -150,95 +155,102 @@ class ChromecastTool(BaseTool):
             name = device.friendly_name
             mc = cast.media_controller
 
-            # --- Execute Action ---
-            if action == "status":
-                status = cast.status
-                media_status = mc.status
-                vol = int((status.volume_level or 0) * 100)
-                muted = status.volume_muted
-                app = status.display_name or "None"
-                media_title = getattr(media_status, "title", "Nothing playing")
-                player_state = getattr(media_status, "player_state", "UNKNOWN")
-                output_msg = (
-                    f"📺 {name}\n"
-                    f"  App: {app}\n"
-                    f"  Volume: {vol}% {'(muted)' if muted else ''}\n"
-                    f"  Playing: {media_title}\n"
-                    f"  State: {player_state}"
-                )
-            elif action == "play":
-                mc.play()
-                output_msg = f"▶️ Sent PLAY to {name}"
-            elif action == "pause":
-                mc.pause()
-                output_msg = f"⏸️ Sent PAUSE to {name}"
-            elif action == "stop":
-                mc.stop()
-                output_msg = f"⏹️ Sent STOP to {name}"
-            elif action == "mute":
-                cast.set_volume_muted(True)
-                output_msg = f"🔇 Muted {name}"
-            elif action == "unmute":
-                cast.set_volume_muted(False)
-                output_msg = f"🔊 Unmuted {name}"
-            elif action == "volume_up":
-                cast.volume_up()
-                output_msg = f"🔊 Volume UP on {name}"
-            elif action == "volume_down":
-                cast.volume_down()
-                output_msg = f"🔉 Volume DOWN on {name}"
-            elif action == "set_volume":
-                try:
-                    vol = float(value)
-                    if vol > 1.0:
-                        vol = vol / 100.0
-                    cast.set_volume(vol)
-                    output_msg = f"🔊 Volume set to {int(vol * 100)}% on {name}"
-                except ValueError:
-                    return ToolResult(success=False, output="Invalid volume. Provide a number 0-100.")
-            elif action == "launch_youtube":
-                yt = YouTubeController()
-                cast.register_handler(yt)
-                yt.launch()
-                output_msg = f"📺 Launched YouTube on {name}"
-            elif action == "play_youtube":
-                if not value:
-                    return ToolResult(
-                        success=False,
-                        output="Provide the YouTube video_id in 'value' for play_youtube.",
+            def _do_action():
+                nonlocal output_msg
+                if action == "status":
+                    status = cast.status
+                    media_status = mc.status
+                    vol = int((status.volume_level or 0) * 100)
+                    muted = status.volume_muted
+                    app = status.display_name or "None"
+                    media_title = getattr(media_status, "title", "Nothing playing")
+                    player_state = getattr(media_status, "player_state", "UNKNOWN")
+                    output_msg = (
+                        f"📺 {name}\n"
+                        f"  App: {app}\n"
+                        f"  Volume: {vol}% {'(muted)' if muted else ''}\n"
+                        f"  Playing: {media_title}\n"
+                        f"  State: {player_state}"
                     )
-                yt = YouTubeController()
-                cast.register_handler(yt)
-                yt.play_video(value)
-                output_msg = f"📺 Playing YouTube video {value} on {name}"
-            elif action == "cast_local_media":
-                import urllib.parse
-                from core.network_utils import get_local_ip
+                elif action == "play":
+                    mc.play()
+                    output_msg = f"▶️ Sent PLAY to {name}"
+                elif action == "pause":
+                    mc.pause()
+                    output_msg = f"⏸️ Sent PAUSE to {name}"
+                elif action == "stop":
+                    mc.stop()
+                    output_msg = f"⏹️ Sent STOP to {name}"
+                elif action == "mute":
+                    cast.set_volume_muted(True)
+                    output_msg = f"🔇 Muted {name}"
+                elif action == "unmute":
+                    cast.set_volume_muted(False)
+                    output_msg = f"🔊 Unmuted {name}"
+                elif action == "volume_up":
+                    cast.volume_up()
+                    output_msg = f"🔊 Volume UP on {name}"
+                elif action == "volume_down":
+                    cast.volume_down()
+                    output_msg = f"🔉 Volume DOWN on {name}"
+                elif action == "set_volume":
+                    try:
+                        vol = float(value)
+                        if vol > 1.0:
+                            vol = vol / 100.0
+                        cast.set_volume(vol)
+                        output_msg = f"🔊 Volume set to {int(vol * 100)}% on {name}"
+                    except ValueError:
+                        output_msg = "error:Invalid volume. Provide a number 0-100."
+                elif action == "launch_youtube":
+                    yt = YouTubeController()
+                    cast.register_handler(yt)
+                    yt.launch()
+                    output_msg = f"📺 Launched YouTube on {name}"
+                elif action == "play_youtube":
+                    if not value:
+                        output_msg = "error:Provide the YouTube video_id in 'value' for play_youtube."
+                        return
+                    yt = YouTubeController()
+                    cast.register_handler(yt)
+                    yt.play_video(value)
+                    output_msg = f"📺 Playing YouTube video {value} on {name}"
+                elif action == "cast_local_media":
+                    import urllib.parse
+                    from core.network_utils import get_local_ip
+    
+                    if not value:
+                        output_msg = "error:Provide the absolute file path in 'value' for cast_local_media."
+                        return
+    
+                    local_ip = get_local_ip()
+                    encoded_path = urllib.parse.quote(value)
+                    stream_url = f"http://{local_ip}:8000/api/media/stream?path={encoded_path}"
+    
+                    content_type = "video/mp4"
+                    if value.endswith(".mkv"):
+                        content_type = "video/x-matroska"
+                    elif value.endswith(".webm"):
+                        content_type = "video/webm"
+                    elif value.endswith(".mp3"):
+                        content_type = "audio/mp3"
+                    elif value.endswith(".avi"):
+                        content_type = "video/x-msvideo"
+    
+                    mc.play_media(stream_url, content_type)
+                    mc.block_until_active()
+                    output_msg = f"🎬 Streaming local file to {name}"
+                elif action == "start_screencast_inner":
+                    # We pass the stream_url down from the async block
+                    mc.play_media(value, "application/x-mpegurl")
+                    mc.block_until_active()
+                    output_msg = f"🖥️ Live screencast started on {name}"
+                elif action == "stop_screencast_inner":
+                    mc.stop()
+                    output_msg = f"⏹️ Screencast stopped on {name}"
 
-                if not value:
-                    return ToolResult(
-                        success=False,
-                        output="Provide the absolute file path in 'value' for cast_local_media.",
-                    )
-
-                local_ip = get_local_ip()
-                encoded_path = urllib.parse.quote(value)
-                stream_url = f"http://{local_ip}:8000/api/media/stream?path={encoded_path}"
-
-                content_type = "video/mp4"
-                if value.endswith(".mkv"):
-                    content_type = "video/x-matroska"
-                elif value.endswith(".webm"):
-                    content_type = "video/webm"
-                elif value.endswith(".mp3"):
-                    content_type = "audio/mp3"
-                elif value.endswith(".avi"):
-                    content_type = "video/x-msvideo"
-
-                mc.play_media(stream_url, content_type)
-                mc.block_until_active()
-                output_msg = f"🎬 Streaming local file to {name}"
-            elif action == "start_screencast":
+            output_msg = ""
+            if action == "start_screencast":
                 if not self.screencast_service:
                     return ToolResult(success=False, output="Screencast service not available.")
                 
@@ -254,18 +266,24 @@ class ChromecastTool(BaseTool):
                 # Wait an extra second to ensure ffmpeg wrote the initial segment
                 await asyncio.sleep(1)
                 
-                mc.play_media(stream_url, "application/x-mpegurl")
-                mc.block_until_active()
-                output_msg = f"🖥️ Live screencast started on {name}"
+                # Override action and value for the inner thread
+                action = "start_screencast_inner"
+                value = stream_url
+                await asyncio.to_thread(_do_action)
             elif action == "stop_screencast":
                 if self.screencast_service:
                     await self.screencast_service.stop()
-                mc.stop()
-                output_msg = f"⏹️ Screencast stopped on {name}"
+                action = "stop_screencast_inner"
+                await asyncio.to_thread(_do_action)
+            elif action in self.VALID_ACTIONS:
+                await asyncio.to_thread(_do_action)
             else:
                 return ToolResult(success=False, output=f"Unhandled action: {action}")
+                
+            if output_msg.startswith("error:"):
+                return ToolResult(success=False, output=output_msg[6:])
 
-            time.sleep(0.3)
+            await asyncio.sleep(0.3)
 
             return ToolResult(success=True, output=output_msg)
 

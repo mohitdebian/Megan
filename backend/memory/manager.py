@@ -58,7 +58,7 @@ class MemoryManager:
         await self.long_term.store(content, memory_type, meta)
 
         # Semantic (vector)
-        self.semantic.store(content, doc_id, meta)
+        await self.semantic.store(content, doc_id, meta)
 
         logger.debug("memory_stored", type=memory_type, length=len(content))
 
@@ -123,7 +123,7 @@ class MemoryManager:
         self, query: str, k: int = 5
     ) -> list[dict]:
         """Recall relevant memories using semantic search."""
-        return self.semantic.search(query, k=k)
+        return await self.semantic.search(query, k=k)
 
     async def get_context(self, query: str, k: int = 5) -> str:
         """Get formatted memory context for Claude system prompt."""

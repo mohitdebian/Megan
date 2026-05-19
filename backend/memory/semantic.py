@@ -28,35 +28,42 @@ class SemanticMemory:
         count = self._collection.count()
         logger.info("semantic_memory_initialized", path=self._path, documents=count)
 
-    def store(self, content: str, doc_id: str, metadata: dict[str, Any] | None = None) -> None:
-        self._collection.upsert(
-            documents=[content],
-            ids=[doc_id],
-            metadatas=[metadata or {}],
-        )
+    async def store(self, content: str, doc_id: str, metadata: dict[str, Any] | None = None) -> None:
+        import asyncio
+        def _store():
+            self._collection.upsert(
+                documents=[content],
+                ids=[doc_id],
+                metadatas=[metadata or {}],
+            )
+        await asyncio.to_thread(_store)
 
-    def search(self, query: str, k: int = 5, where: dict | None = None) -> list[dict]:
-        kwargs: dict[str, Any] = {
-            "query_texts": [query],
-            "n_results": min(k, self._collection.count()) if self._collection.count() > 0 else 1,
-        }
-        if where:
-            kwargs["where"] = where
+    async def search(self, query: str, k: int = 5, where: dict | None = None) -> list[dict]:
+        import asyncio
+        def _search():
+            kwargs: dict[str, Any] = {
+                "query_texts": [query],
+                "n_results": min(k, self._collection.count()) if self._collection.count() > 0 else 1,
+            }
+            if where:
+                kwargs["where"] = where
 
-        if self._collection.count() == 0:
-            return []
+            if self._collection.count() == 0:
+                return []
 
-        results = self._collection.query(**kwargs)
+            results = self._collection.query(**kwargs)
 
-        memories = []
-        for i in range(len(results["ids"][0])):
-            memories.append({
-                "id": results["ids"][0][i],
-                "content": results["documents"][0][i],
-                "metadata": results["metadatas"][0][i] if results["metadatas"] else {},
-                "distance": results["distances"][0][i] if results["distances"] else 0,
-            })
-        return memories
+            memories = []
+            for i in range(len(results["ids"][0])):
+                memories.append({
+                    "id": results["ids"][0][i],
+                    "content": results["documents"][0][i],
+                    "metadata": results["metadatas"][0][i] if results["metadatas"] else {},
+                    "distance": results["distances"][0][i] if results["distances"] else 0,
+                })
+            return memories
+            
+        return await asyncio.to_thread(_search)
 
     def delete(self, doc_id: str) -> None:
         self._collection.delete(ids=[doc_id])
