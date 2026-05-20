@@ -138,7 +138,7 @@ class ChromecastTool(BaseTool):
             last_error = ""
             for attempt in range(3):
                 try:
-                    cast = self._get_cached_cast(device)
+                    cast = await self._get_cached_cast(device)
                     break
                 except Exception as e:
                     last_error = str(e)
